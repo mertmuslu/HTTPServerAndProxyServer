@@ -4,16 +4,19 @@ import java.util.Scanner;
 
 public class HTTPServer {
     public static void main(String[] args) throws IOException {
+        //try-with-resource statements to close scanner and serverSocket objects (they give warning about not being closed, not necessary to close them)
         try (Scanner scanner = new Scanner(System.in)) {
             System.out.print("Enter the port number: ");
             int portNumber = scanner.nextInt();
-            ServerSocket serverSocket = new ServerSocket(portNumber);
-            System.out.println("Server is listening on port: " + portNumber);
+            //other try-with-resource statement to close serverSocket object
+            try (ServerSocket serverSocket = new ServerSocket(portNumber)) {
+                System.out.println("Server is listening on port: " + portNumber);
 
-            while (true) {
-                // If there is no client, the accept() method will block the program until a client connects
-                Socket clientSocket = serverSocket.accept();
-                new Thread(() -> handleClient(clientSocket)).start();
+                while (true) {
+                    // If there is no client, the accept() method will block the program until a client connects
+                    Socket clientSocket = serverSocket.accept();
+                    new Thread(() -> handleClient(clientSocket)).start();
+                }
             }
         }
     }
@@ -103,7 +106,7 @@ public class HTTPServer {
                 clientSocket.close();
             } 
             catch (IOException e) {
-                e.printStackTrace();
+                System.err.println("Error closing client socket: " + e.getMessage());
             }
         }
     }
