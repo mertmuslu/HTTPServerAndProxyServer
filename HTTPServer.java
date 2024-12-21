@@ -5,7 +5,7 @@ import java.util.Scanner;
 public class HTTPServer {
     public static void main(String[] args) throws IOException {
         Scanner scanner = new Scanner(System.in);
-        System.out.println("Enter the port number: ");
+        System.out.print("Enter the port number: ");
         int portNumber = scanner.nextInt();
         scanner.close();
         ServerSocket serverSocket = new ServerSocket(portNumber);
@@ -32,14 +32,31 @@ public class HTTPServer {
 
             String requestLine = in.readLine();
             System.out.println("Request: " + requestLine);
-
-            // Extract the requested URI from the request line
+            
+            // Extract the method and requested URI from the request line
             String[] requestParts = requestLine.split(" ");
+            String method = requestParts[0];
             String uri = requestParts[1];
+
+            // I added this temporarily to ignore favicon requests
+            // Ignore "favicon.ico" requests
+            if ("/favicon.ico".equals(uri)) {
+                out.println("HTTP/1.1 204 No Content");
+                return;
+            }
+
+            // Check if the method is GET
+            if (!"GET".equals(method)) {
+                out.println("HTTP/1.1 501 Not Implemented");
+                out.println("Content-Type: text/html; charset=UTF-8");
+                out.println();
+                out.println();
+                return;
+            }
 
             // Print client connection details for non-favicon requests
             System.out.println("New client connected");
-            System.out.println("Client IP:" + clientSocket.getInetAddress().getHostAddress());
+            //System.out.println("Client IP:" + clientSocket.getInetAddress().getHostAddress());
 
             // Determine the number of bytes to return based on the URI
             int numBytes;
@@ -52,19 +69,23 @@ public class HTTPServer {
                     throw new NumberFormatException();
                 }
 
-            } catch (NumberFormatException e) {
+            } 
+            // If the URI is not between 100 and 20000, return a 400 Bad Request response
+            catch (NumberFormatException e) {
                 out.println("HTTP/1.1 400 Bad Request");
+                out.println("Content-Type: text/html; charset=UTF-8");
+                out.println();
+                out.println();
                 return;
             }
-
-            // Calculate the header size
-            String header = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n";
-            int headerSize = header.length();
 
             // Generate the HTML content
             String title = "<HTML><HEAD><TITLE>I am " + numBytes + " bytes long</TITLE></HEAD><BODY>";
             String footer = "</BODY></HTML>";
-            int contentSize = numBytes - headerSize - title.length() - footer.length();
+            int digitNum = (int) Math.log10(numBytes);
+            int staticPartsLength = title.length() + footer.length() + digitNum;
+            int headerSize = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n".length();
+            int contentSize = numBytes - staticPartsLength - headerSize;
 
             // Generate a response with the specified number of bytes
             StringBuilder responseBody = new StringBuilder();
@@ -73,7 +94,9 @@ public class HTTPServer {
             }
 
             // Send HTTP response
-            out.print(header);
+            out.println("HTTP/1.1 200 OK");
+            out.println("Content-Type: text/html; charset=UTF-8");
+            out.println();
             out.println(title + responseBody.toString() + footer);
             
         } catch (IOException e) {
