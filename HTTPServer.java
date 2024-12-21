@@ -9,7 +9,7 @@ public class HTTPServer {
         int portNumber = scanner.nextInt();
         scanner.close();
         ServerSocket serverSocket = new ServerSocket(portNumber);
-        System.out.print("Server is listening on port: " + portNumber);
+        System.out.println("Server is listening on port: " + portNumber);
 
         while (true) {
             // If there is no client, the accept() method will block the program until a client connects
@@ -38,21 +38,16 @@ public class HTTPServer {
             String method = requestParts[0];
             String uri = requestParts[1];
 
-            // I added this temporarily to ignore favicon requests
-            // Ignore "favicon.ico" requests
-            if ("/favicon.ico".equals(uri)) {
-                out.println("HTTP/1.1 204 No Content");
-                return;
-            }
-
             // Check if the method is GET
             if (!"GET".equals(method)) {
                 out.println("HTTP/1.1 501 Not Implemented");
                 out.println("Content-Type: text/html; charset=UTF-8");
                 out.println();
                 out.println();
+                System.out.println("Response: HTTP/1.1 501 Not Implemented");
                 return;
             }
+            
 
             // Print client connection details for non-favicon requests
             System.out.println("New client connected");
@@ -76,6 +71,7 @@ public class HTTPServer {
                 out.println("Content-Type: text/html; charset=UTF-8");
                 out.println();
                 out.println();
+                System.out.println("Response: HTTP/1.1 400 Bad Request");
                 return;
             }
 
@@ -98,6 +94,7 @@ public class HTTPServer {
             out.println("Content-Type: text/html; charset=UTF-8");
             out.println();
             out.println(title + responseBody.toString() + footer);
+            System.out.println("Response: HTTP/1.1 200 OK");
             
         } catch (IOException e) {
             e.printStackTrace();
