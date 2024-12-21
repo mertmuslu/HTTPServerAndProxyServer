@@ -4,17 +4,17 @@ import java.util.Scanner;
 
 public class HTTPServer {
     public static void main(String[] args) throws IOException {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter the port number: ");
-        int portNumber = scanner.nextInt();
-        scanner.close();
-        ServerSocket serverSocket = new ServerSocket(portNumber);
-        System.out.println("Server is listening on port: " + portNumber);
+        try (Scanner scanner = new Scanner(System.in)) {
+            System.out.print("Enter the port number: ");
+            int portNumber = scanner.nextInt();
+            ServerSocket serverSocket = new ServerSocket(portNumber);
+            System.out.println("Server is listening on port: " + portNumber);
 
-        while (true) {
-            // If there is no client, the accept() method will block the program until a client connects
-            Socket clientSocket = serverSocket.accept();
-            new Thread(() -> handleClient(clientSocket)).start();
+            while (true) {
+                // If there is no client, the accept() method will block the program until a client connects
+                Socket clientSocket = serverSocket.accept();
+                new Thread(() -> handleClient(clientSocket)).start();
+            }
         }
     }
 
@@ -97,7 +97,7 @@ public class HTTPServer {
             System.out.println("Response: HTTP/1.1 200 OK");
             
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error closing client socket: " + e.getMessage());
         } finally {
             try {
                 clientSocket.close();
