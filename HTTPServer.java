@@ -3,11 +3,14 @@ import java.net.*;
 import java.util.Scanner;
 
 public class HTTPServer {
+    private static int portNumber;
+
     public static void main(String[] args) throws IOException {
         //try-with-resource statements to close scanner and serverSocket objects (they give warning about not being closed, not necessary to close them)
         try (Scanner scanner = new Scanner(System.in)) {
             System.out.print("Enter the port number: ");
-            int portNumber = scanner.nextInt();
+            portNumber = scanner.nextInt();
+            savePortNumber(portNumber);
             //other try-with-resource statement to close serverSocket object
             try (ServerSocket serverSocket = new ServerSocket(portNumber)) {
                 System.out.println("Server is listening on port: " + portNumber);
@@ -18,6 +21,16 @@ public class HTTPServer {
                     new Thread(() -> handleClient(clientSocket)).start();
                 }
             }
+        }
+    }
+
+    public static int getPortNumber() {
+        return portNumber;
+    }
+
+    private static void savePortNumber(int portNumber) throws IOException {
+        try (PrintWriter out = new PrintWriter(new FileWriter("portNumber.txt"))) {
+            out.println(portNumber);
         }
     }
 
@@ -53,7 +66,7 @@ public class HTTPServer {
             
 
             // Print client connection details for non-favicon requests
-            System.out.println("New client connected");
+            //System.out.println("New client connected");
             //System.out.println("Client IP:" + clientSocket.getInetAddress().getHostAddress());
 
             // Determine the number of bytes to return based on the URI
