@@ -20,6 +20,8 @@ public class HTTPServer {
                     Socket clientSocket = serverSocket.accept();
                     new Thread(() -> handleClient(clientSocket)).start();
                 }
+            } finally {
+                deletePortNumber();
             }
         }
     }
@@ -31,6 +33,13 @@ public class HTTPServer {
     private static void savePortNumber(int portNumber) throws IOException {
         try (PrintWriter out = new PrintWriter(new FileWriter("portNumber.txt"))) {
             out.println(portNumber);
+        }
+    }
+
+    private static void deletePortNumber() {
+        File file = new File("portNumber.txt");
+        if (file.exists()) {
+            file.delete();
         }
     }
 
@@ -51,8 +60,9 @@ public class HTTPServer {
             
             // Extract the method and requested URI from the request line
             String[] requestParts = requestLine.split(" ");
-            String method = requestParts[0];
-            String uri = requestParts[1];
+            String method = requestParts[0]; // Holds GET
+            String uri = requestParts[1]; // it holds "/URI"
+            // requestParts[2] holds "HTTP/1.1"
 
             // Check if the method is GET
             if (!"GET".equals(method)) {
@@ -71,11 +81,12 @@ public class HTTPServer {
 
             // Determine the number of bytes to return based on the URI
             int numBytes;
-            int controlBytes;
+            int uriNum;
             
             try {
-                controlBytes = Integer.parseInt(uri.substring(1));
-                numBytes = ((controlBytes <= 20000) && (controlBytes >= 100) ? controlBytes : 0);
+                // discards "/" and turns the remaining string to integer
+                uriNum = Integer.parseInt(uri.substring(1)); 
+                numBytes = ((uriNum <= 20000) && (uriNum >= 100) ? uriNum : 0);
                 if(numBytes == 0) {
                     throw new NumberFormatException();
                 }

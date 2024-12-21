@@ -16,7 +16,11 @@ public class ProxyServer {
     }
 
     private static int readPortNumber() throws IOException {
-        try (BufferedReader reader = new BufferedReader(new FileReader("portNumber.txt"))) {
+        File file = new File("portNumber.txt");
+        if (!file.exists()) {
+            return -1;
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             return Integer.parseInt(reader.readLine());
         }
     }
@@ -25,8 +29,41 @@ public class ProxyServer {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
              PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
 
+            if (targetPort == -1) {
+                out.println("HTTP/1.1 404 Not Found");
+                out.println("Content-Type: text/plain");
+                out.println("Content-Length: 13");
+                out.println();
+                out.println("Not Found");
+                return;
+            }
+
             String requestLine = in.readLine();
             System.out.println("Request: " + requestLine);
+            String[] requestParts = requestLine.split(" ");
+            String method = requestParts[0]; // Holds GET
+            String uri = requestParts[1]; // it holds "/URI"
+            // requestParts[2] holds "HTTP/1.1"
+
+            // Check if the method is GET and if the requested URI exceeds 9999
+            if ("GET".equals(method)) {
+                try {
+                    int uriNum = Integer.parseInt(uri.substring(1));
+                    if (uriNum > 9999) {
+                        out.println("HTTP/1.1 414 Request-URI Too Long");
+                        out.println("Content-Type: text/plain");
+                        out.println("Content-Length: 23");
+                        out.println();
+                        out.println("Request-URI too long");
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    // If not a number
+                    if (!"GET".equals(uri)) {
+                        return;
+                    }
+                }
+            }
 
             // Forward the request to the target server
             try (Socket targetSocket = new Socket("localhost", targetPort);
@@ -40,11 +77,12 @@ public class ProxyServer {
                     targetOut.println(headerLine);
                 }
                 targetOut.println();
-
+                
                 // Read the response from the target server and send it back to the client
                 String responseLine;
                 while ((responseLine = targetIn.readLine()) != null) {
                     out.println(responseLine);
+                    System.out.println(responseLine);
                 }
             } catch (BindException e) {
                 System.err.println("BindException: " + e.getMessage());
