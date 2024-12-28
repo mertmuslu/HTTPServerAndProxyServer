@@ -39,13 +39,14 @@ public class HTTPandProxyServer {
     private static void startProxyServer() throws IOException {
         int proxyPort = 8888; // Port for the proxy server
         int targetPort = readPortNumber(); // Read the port number from the file
+        String targetHost = "localhost";
         ServerSocket serverSocket = new ServerSocket(proxyPort);
         System.out.println("Target server is listening on port: " + targetPort);
         System.out.println("Proxy server is listening on port: " + proxyPort);
 
         while (true) {
             Socket clientSocket = serverSocket.accept();
-            new Thread(() -> handleProxyClient(clientSocket, targetPort)).start();
+            new Thread(() -> handleProxyClient(clientSocket, targetPort, targetHost)).start();
         }
     }
 
@@ -148,7 +149,7 @@ public class HTTPandProxyServer {
         }
     }
 
-    private static void handleProxyClient(Socket clientSocket, int targetPort) {
+    private static void handleProxyClient(Socket clientSocket, int targetPort, String targetHost) {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
              PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
 
@@ -189,7 +190,7 @@ public class HTTPandProxyServer {
             }
 
             // Forward the request to the target server
-            try (Socket targetSocket = new Socket("localhost", targetPort);
+            try (Socket targetSocket = new Socket(targetHost, targetPort);
                  PrintWriter targetOut = new PrintWriter(targetSocket.getOutputStream(), true);
                  BufferedReader targetIn = new BufferedReader(new InputStreamReader(targetSocket.getInputStream()))) {
 
@@ -200,7 +201,7 @@ public class HTTPandProxyServer {
                     targetOut.println(headerLine);
                 }
                 targetOut.println();
-
+ 
                 // Read the response from the target server and send it back to the client
                 String responseLine;
                 while ((responseLine = targetIn.readLine()) != null) {

@@ -57,6 +57,13 @@ public class HTTPServer {
 
             String requestLine = in.readLine();
             System.out.println("Request: " + requestLine);
+
+            //Print the other lines
+            String headerLine;
+            while (!(headerLine = in.readLine()).isEmpty()) {
+                System.out.println(headerLine);
+            }
+            
             
             // Extract the method and requested URI from the request line
             String[] requestParts = requestLine.split(" ");
@@ -84,13 +91,13 @@ public class HTTPServer {
             int uriNum;
             
             try {
+                System.out.println("uri: " + uri);
                 // discards "/" and turns the remaining string to integer
                 uriNum = Integer.parseInt(uri.substring(1)); 
                 numBytes = ((uriNum <= 20000) && (uriNum >= 100) ? uriNum : 0);
                 if(numBytes == 0) {
                     throw new NumberFormatException();
                 }
-
             } 
             // If the URI is not between 100 and 20000, return a 400 Bad Request response
             catch (NumberFormatException e) {
