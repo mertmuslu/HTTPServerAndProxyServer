@@ -84,7 +84,6 @@ public class HTTPServer {
             int uriNum;
             
             try {
-                System.out.println("uri: " + uri);
                 // discards "/" and turns the remaining string to integer
                 uriNum = Integer.parseInt(uri.substring(1)); 
                 numBytes = ((uriNum <= 20000) && (uriNum >= 100) ? uriNum : 0);

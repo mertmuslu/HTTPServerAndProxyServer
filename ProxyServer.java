@@ -4,16 +4,18 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
-public class ErkutProxy {
+public class ProxyServer {
     static int proxyPort = 8888;
     static String defaultTargetHost = "localhost";
     static int defaultTargetPort = 80;  // HTTP Port
     static int maxRequestSize = 9999;
-    static int cacheSize = 5; // Cache size
+    static int cacheSize; // Cache size
     static Map<String, CacheEntry> cache = new LinkedHashMap<>(cacheSize, 0.75f, true); // LRU Cache
 
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(proxyPort);
+        System.out.println("Enter cache size: ");
+        cacheSize = Integer.parseInt(System.console().readLine());
         System.out.println("Proxy server is listening on port: " + proxyPort);
         ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -51,10 +53,10 @@ public class ErkutProxy {
                 out.println("HTTP/1.1 400 Bad Request");
                 return;
             }
-
+            int requestedFileSize = 0;
             if (host != null && host.equals("localhost") && path != null) {
                 try {
-                    int requestedFileSize = Integer.parseInt(path.split("/")[1]);
+                    requestedFileSize = Integer.parseInt(path.split("/")[1]);
                     if (requestedFileSize > maxRequestSize) {
                         out.println("HTTP/1.1 414 Request-URI Too Long");
                         return;
@@ -65,19 +67,29 @@ public class ErkutProxy {
                     return;
                 }
             }
-
-            // Cache kontrolü
-            if (method.equals("GET")) {
-                System.out.println("Request URI for cache control: " + requestURI);
-                CacheEntry cacheEntry = cache.get(requestURI);
-                if (cacheEntry != null) {
-                    System.out.println("Cache hit for: " + requestURI);
-                    out.println(cacheEntry.response);
-                    return;
+                // Cache control
+                if (method.equals("GET")) {
+                    System.out.println("Request URI for cache control: " + requestURI);
+                    CacheEntry cacheEntry = cache.get(requestURI);
+                    if (cacheEntry != null) {
+                        // If the requested file size is even, file is modified
+                        if (requestedFileSize % 2 == 0) {
+                            System.out.println("File is modified");
+                        }
+                        // If the requested file size is odd, file is not modified  
+                        else if (requestedFileSize % 2 == 1) {
+                            System.out.println("File is not modified");
+                            System.out.println("Cache hit for: " + requestURI);
+                            out.println(cacheEntry.response);
+                            return;
+                        }
+                    }
                 }
-            }
+            
 
-            // Hedef sunucuya istek ilet
+            
+
+            // Forward the request to the target server
             try (
                 Socket targetSocket = new Socket(host, port);
                 PrintWriter targetOut = new PrintWriter(targetSocket.getOutputStream(), true);
