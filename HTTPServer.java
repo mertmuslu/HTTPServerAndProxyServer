@@ -10,7 +10,6 @@ public class HTTPServer {
         try (Scanner scanner = new Scanner(System.in)) {
             System.out.print("Enter the port number: ");
             portNumber = scanner.nextInt();
-            savePortNumber(portNumber);
             //other try-with-resource statement to close serverSocket object
             try (ServerSocket serverSocket = new ServerSocket(portNumber)) {
                 System.out.println("Server is listening on port: " + portNumber);
@@ -23,23 +22,6 @@ public class HTTPServer {
             } finally {
                 // delete portNumber operations will be added here
             }
-        }
-    }
-
-    public static int getPortNumber() {
-        return portNumber;
-    }
-
-    private static void savePortNumber(int portNumber) throws IOException {
-        try (PrintWriter out = new PrintWriter(new FileWriter("portNumber.txt"))) {
-            out.println(portNumber);
-        }
-    }
-
-    private static void deletePortNumber() {
-        File file = new File("portNumber.txt");
-        if (file.exists()) {
-            file.delete();
         }
     }
 
@@ -56,15 +38,26 @@ public class HTTPServer {
              PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)) {
 
             String requestLine = in.readLine();
-            System.out.println("Request: " + requestLine);
+            if (requestLine == null) return;
+            System.out.println("v===================REQUEST===================v");
+            System.out.println(requestLine);
 
-            //Print the other lines
+            // Read and store headers
+            StringBuilder headersBuilder = new StringBuilder();
             String headerLine;
+            String host = null;
             while (!(headerLine = in.readLine()).isEmpty()) {
                 System.out.println(headerLine);
+                headersBuilder.append(headerLine).append("\r\n");
+                if (headerLine.toLowerCase().startsWith("host:")) {
+                    host = headerLine.substring(5).trim().split(":")[0];
+                }
             }
-            
-            
+
+            System.out.println("^===================REQUESTS===================^");
+            headersBuilder.append("\r\n");
+            String headers = headersBuilder.toString();
+
             // Extract the method and requested URI from the request line
             String[] requestParts = requestLine.split(" ");
             String method = requestParts[0]; // Holds GET
