@@ -7,10 +7,8 @@ import java.util.concurrent.ExecutorService;
 public class ProxyServerWithCache {
     static int proxyPort = 8888;
     static String defaultTargetHost = "localhost";
-    static int defaultTargetPort = 443;
+    static int defaultTargetPort = 80;
     static int maxRequestSize = 9999;
-    static int cacheSize = 5; // Cache size
-    static Map<String, CacheEntry> cache = new LinkedHashMap<>(cacheSize, 0.75f, true); // LRU Cache
 
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(proxyPort);
@@ -28,19 +26,25 @@ public class ProxyServerWithCache {
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
         ) {
+
             String requestLine = in.readLine();
             if (requestLine == null || requestLine.isEmpty()) return;
-
-            System.out.println("Request: " + requestLine);
             String[] parts = requestLine.split(" ");
+            if (parts.length != 3) {
+                out.println("HTTP/1.1 400 Bad Request");
+                return;
+            }
+
+
+
             String method = parts[0];
             String requestURI = parts[1];
-            String requestVersion = parts[2];
-
+            String httpVersion = parts[2];
             // Parse URI
             String host = "";
             int port = -1;
             String path = "";
+            
             try {
                 URI uri = new URI(requestURI);
                 host = uri.getHost();
@@ -53,16 +57,21 @@ public class ProxyServerWithCache {
                 return;
             }
 
-            // Check cache
-            if (method.equals("GET")) {
-                CacheEntry cacheEntry = cache.get(requestURI);
-                if (cacheEntry != null) {
-                    System.out.println("Cache hit for: " + requestURI);
-                    out.println(cacheEntry.response);
+            if (host != null && host.equals("localhost") && path != null) {
+                try {
+                    int requestedFileSize = Integer.parseInt(path.split("/")[1]);
+                    if (requestedFileSize > maxRequestSize) {
+                        out.println("HTTP/1.1 414 Request-URI Too Long");
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    // If not a number
+                    System.out.println("Not a number");
                     return;
                 }
             }
-
+            System.out.println("Request: " + requestLine);
+            System.out.println("Host: " + host + " Port: " + port + " Version: " + httpVersion);
             // Forward request to target server
             try (
                 Socket targetSocket = new Socket(host, port);
@@ -70,43 +79,15 @@ public class ProxyServerWithCache {
                 BufferedReader targetIn = new BufferedReader(new InputStreamReader(targetSocket.getInputStream()))
             ) {
                 // Forward request
-                targetOut.println(requestLine);
-                String headerLine;
-                while (!(headerLine = in.readLine()).isEmpty()) {
-                    targetOut.println(headerLine);
-                }
+                targetOut.println(method + " " + path + " " + httpVersion);
+                System.out.println("Forwarded request: " + method + " " + path + " " + httpVersion);
+                targetOut.println("Host: " + host);
                 targetOut.println();
-
-                // Read response from target server
-                StringBuilder responseBuilder = new StringBuilder();
-                String responseLine;
-                boolean isEvenFile = path.length() % 2 == 0;
-                boolean conditionalGet = false;
-
-                while ((responseLine = targetIn.readLine()) != null) {
-                    responseBuilder.append(responseLine).append("\n");
-
-                    // Conditional GET logic
-                    if (responseLine.startsWith("Last-Modified:") && !isEvenFile) {
-                        targetOut.println("If-Modified-Since: " + responseLine.split(": ", 2)[1]);
-                        conditionalGet = true;
-                    }
+                
+                String line;
+                while ((line = targetIn.readLine()) != null) {
+                    out.println(line);
                 }
-
-                String response = responseBuilder.toString();
-
-                // Cache the response if no conditional GET or modified content
-                if (!conditionalGet || isEvenFile) {
-                    if (cache.size() >= cacheSize) {
-                        String oldestKey = cache.keySet().iterator().next();
-                        cache.remove(oldestKey);
-                        System.out.println("Cache full, removed: " + oldestKey);
-                    }
-                    cache.put(requestURI, new CacheEntry(response));
-                }
-
-                // Send response back to client
-                out.println(response);
 
             } catch (IOException e) {
                 out.println("HTTP/1.1 502 Bad Gateway");
@@ -116,21 +97,15 @@ public class ProxyServerWithCache {
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            System.out.println("222222222222222222222");
         } finally {
             try {
                 clientSocket.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
+                System.out.println("333333333333333333333");
             }
-        }
-    }
-
-    static class CacheEntry {
-        String response;
-
-        CacheEntry(String response) {
-            this.response = response;
         }
     }
 }
